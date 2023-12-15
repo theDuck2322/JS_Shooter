@@ -56,3 +56,15 @@ document.addEventListener('DOMContentLoaded', () => {
         createAsteroid(animationContainer);
     }
 });
+
+function gamePage(){
+    window.location.href = "gamePage.html";
+}
+
+const playButton = document.getElementById('Play');
+playButton.onclick = () => {
+    gamePage();
+}
+
+
+
