@@ -6,6 +6,7 @@ canvas.width = width;
 canvas.height = height;
 
 let speed = 4;
+let speedR = 0.05;
 
 // initializing classes
 
@@ -17,12 +18,12 @@ class Text {
 }
 
 class Player {
-    constructor(px, py, width, height) {
+    constructor(px, py, width, height, rotation) {
         this.px = px;
         this.py = py;
         this.width = width;
         this.height = height;
-        this.rotation = 0; // Initialize rotation to 0
+        this.rotation = rotation; // Initialize rotation to 0
         this.sprite = new Image();
         this.sprite.src = 'Resources/rocket.png';
     }
@@ -31,6 +32,7 @@ class Player {
 // making objects
 
 let player = new Player((width / 2) - 50, (height / 2) - 80, 50, 80);
+player.rotation = 0;
 
 let scoreText = new Text(1300, 50);
 let score = 0;
@@ -58,39 +60,97 @@ function drawPlayer() {
     ctx.restore(); // Restore the saved context state
 }
 
-function movePlayer() {
-    window.addEventListener("keydown", function (event) {
-        if (event.defaultPrevented) {
-            return; // Do nothing if the event was already processed
-        }
+var keys = {
+    "w": false,
+    "a": false,
+    "s": false,
+    "d": false,
+    "ArrowLeft": false,
+    "ArrowRight": false,
+    "h": false
+};
 
-        switch (event.key) {
-            case "s":
-                player.py += speed;
-                break;
-            case "w":
-                player.py -= speed;
-                break;
-            case "a":
-                player.px -= speed;
-                break;
-            case "d":
-                player.px += speed;
-                break;
-            case "ArrowLeft": // Rotate counter-clockwise on left arrow key press
-                player.rotation -= 0.1;
-                break;
-            case "ArrowRight": // Rotate clockwise on right arrow key press
-                player.rotation += 0.1;
-                break;
-            default:
-                return; // Quit when this doesn't handle the key event.
-        }
+// Add event listeners to update the keys object
+window.addEventListener("keydown", function (event) {
+    if (event.defaultPrevented) {
+        return;
+    }
+    keys[event.key] = true;
+    event.preventDefault();
+}, true);
 
-        // Cancel the default action to avoid it being handled twice
-        event.preventDefault();
-    }, true);
+window.addEventListener("keyup", function (event) {
+    if (event.defaultPrevented) {
+        return;
+    }
+    keys[event.key] = false;
+    event.preventDefault();
+}, true);
+
+// Your playerMove function
+function playerMove() {
+    // Update the player's position based on the keys pressed
+    let degree = player.rotation * (180 / Math.PI);
+    let rad = degree / (180 / Math.PI);
+    
+    if (degree >= 360) {
+        degree = Math.abs(degree - 360); // Subtract 360 degrees
+        rad = degree / (180 / Math.PI);
+        player.rotation = rad;
+    }
+    if(degree <=0){
+        degree = Math.abs(degree - 360); // Subtract 360 degrees
+        rad = degree / (180 / Math.PI);
+        player.rotation = rad;
+    }
+
+
+    if (keys["w"]) {
+        player.py -= speed;
+    }
+    if (keys["a"]) {
+        player.px -= speed;
+    }
+    if (keys["s"]) {
+        player.py += speed;
+    }
+    if (keys["d"]) {
+        player.px += speed;
+    }
+
+    if (keys["ArrowLeft"]) {
+        player.rotation -= speedR;
+    }
+    if (keys["ArrowRight"]) {
+        player.rotation += speedR;
+    }
+    ///// test key /////
+    if(keys["h"]){
+        console.log(`Player Rotation ${player.rotation} in degres = ${degree} and bac to rad = ${rad}`);
+    }
 }
+
+let shootEnabled = true; // Add a flag to check if shooting is enabled
+
+function Shoot() {
+    if (shootEnabled) {
+        canvas.addEventListener("mousedown", createBullet);
+        shootEnabled = false; // Disable shooting until the bullet is created
+    }
+
+    function createBullet(event) {
+        if (event.button === 0) {
+            ctx.fillStyle = "#ff0000";
+            console.log("Shoot");
+
+            // Optionally, remove the event listener if you don't need it anymore
+            canvas.removeEventListener("mousedown", createBullet);
+
+            shootEnabled = true; // Enable shooting again after the bullet is created
+        }
+    }
+}
+
 
 function draw() {
     clear();
@@ -106,7 +166,13 @@ function start() {
 function update() {
     draw();
     getScore();
-    movePlayer();
+    playerMove();
+    Shoot();
+
+
+
+
+
     requestAnimationFrame(update);
 }
 
