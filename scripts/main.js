@@ -71,7 +71,9 @@ class Text {
 let player = new Player((width / 2) - 50, (height / 2) - 80, 50, 80, 0);
 let bullets = [];
 let scoreText = new Text(1300, 50, "Score: 0", "bold 18px Arial");
+let hpText = new Text(50, 50, "HP: 100", "bold 18px Arial");
 let score = 0;
+let hp = 100;
 
 // Input handling
 let keys = {
@@ -100,16 +102,18 @@ function clear() {
     ctx.fillRect(0, 0, width, height);
 }
 
-function drawScore() {
+function textDraw() {
     scoreText.text = `Score: ${score}`;
     scoreText.draw();
+    hpText.text = `HP: ${hp}`;
+    hpText.draw();
 }
 
 function playerMove() {
-    if (keys["w"]) player.y -= speed;
-    if (keys["a"]) player.x -= speed;
-    if (keys["s"]) player.y += speed;
-    if (keys["d"]) player.x += speed;
+    if (keys["w"] && player.y > 0) player.y -= speed;
+    if (keys["a"] && player.x > 0) player.x -= speed;
+    if (keys["s"] && player.y < height-player.height-5) player.y += speed;
+    if (keys["d"] && player.x < width-player.width-10) player.x += speed;
 
     if (keys["ArrowLeft"]) player.rotation -= speedR;
     if (keys["ArrowRight"]) player.rotation += speedR;
@@ -163,7 +167,7 @@ function update() {
     playerMove();
     player.draw();
     updateBullets();
-    drawScore();
+    textDraw();
     requestAnimationFrame(update);
 }
 
