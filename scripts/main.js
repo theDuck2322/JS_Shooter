@@ -8,59 +8,73 @@ canvas.height = height;
 let speed = 4;
 let speedR = 0.05;
 
-// initializing classes
-
-class Text {
-    constructor(x, y) {
+// Player class
+class Player {
+    constructor(x, y, width, height, rotation) {
         this.x = x;
         this.y = y;
-    }
-}
-
-class Player {
-    constructor(px, py, width, height, rotation) {
-        this.px = px;
-        this.py = py;
         this.width = width;
         this.height = height;
-        this.rotation = rotation; // Initialize rotation to 0
+        this.rotation = rotation;
         this.sprite = new Image();
         this.sprite.src = 'Resources/rocket.png';
     }
+
+    draw() {
+        ctx.save();
+        ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+        ctx.rotate(this.rotation);
+        ctx.drawImage(this.sprite, -this.width / 2, -this.height / 2, this.width, this.height);
+        ctx.restore();
+    }
 }
 
-// making objects
+// Bullet class
+class Bullet {
+    constructor(x, y, width, height, rotation) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.rotation = rotation;
+        this.speed = 10;
+    }
 
-let player = new Player((width / 2) - 50, (height / 2) - 80, 50, 80);
-player.rotation = 0;
+    update() {
+        this.x += this.speed * Math.cos(this.rotation);
+        this.y += this.speed * Math.sin(this.rotation);
+    }
 
-let scoreText = new Text(1300, 50);
+    draw() {
+        ctx.fillStyle = "#ff0000";
+        ctx.fillRect(this.x, this.y, this.width, this.height);
+    }
+}
+
+// Text class
+class Text {
+    constructor(x, y, text, font) {
+        this.x = x;
+        this.y = y;
+        this.text = text;
+        this.font = font;
+    }
+
+    draw() {
+        ctx.fillStyle = "white";
+        ctx.font = this.font;
+        ctx.fillText(this.text, this.x, this.y);
+    }
+}
+
+// Game state
+let player = new Player((width / 2) - 50, (height / 2) - 80, 50, 80, 0);
+let bullets = [];
+let scoreText = new Text(1300, 50, "Score: 0", "bold 18px Arial");
 let score = 0;
 
-function drawScore() {
-    ctx.fillStyle = "white";
-    ctx.font = "bold 18px Arial";
-    ctx.fillText(`Score: ${score}`, scoreText.x, scoreText.y);
-}
-
-function getScore() {
-    // Implement score logic if needed
-}
-
-function clear() {
-    ctx.fillStyle = "#000061";
-    ctx.fillRect(0, 0, width, height);
-}
-
-function drawPlayer() {
-    ctx.save(); // Save the current context state
-    ctx.translate(player.px + player.width / 2, player.py + player.height / 2); // Translate to the center of the player
-    ctx.rotate(player.rotation); // Rotate
-    ctx.drawImage(player.sprite, -player.width / 2, -player.height / 2, player.width, player.height); // Draw the rotated player
-    ctx.restore(); // Restore the saved context state
-}
-
-var keys = {
+// Input handling
+let keys = {
     "w": false,
     "a": false,
     "s": false,
@@ -70,109 +84,91 @@ var keys = {
     "h": false
 };
 
-// Add event listeners to update the keys object
 window.addEventListener("keydown", function (event) {
-    if (event.defaultPrevented) {
-        return;
-    }
     keys[event.key] = true;
     event.preventDefault();
 }, true);
 
 window.addEventListener("keyup", function (event) {
-    if (event.defaultPrevented) {
-        return;
-    }
     keys[event.key] = false;
     event.preventDefault();
 }, true);
 
-// Your playerMove function
+// Game functions
+function clear() {
+    ctx.fillStyle = "#000061";
+    ctx.fillRect(0, 0, width, height);
+}
+
+function drawScore() {
+    scoreText.text = `Score: ${score}`;
+    scoreText.draw();
+}
+
 function playerMove() {
-    // Update the player's position based on the keys pressed
-    let degree = player.rotation * (180 / Math.PI);
-    let rad = degree / (180 / Math.PI);
-    
-    if (degree >= 360) {
-        degree = Math.abs(degree - 360); // Subtract 360 degrees
-        rad = degree / (180 / Math.PI);
-        player.rotation = rad;
-    }
-    if(degree <=0){
-        degree = Math.abs(degree - 360); // Subtract 360 degrees
-        rad = degree / (180 / Math.PI);
-        player.rotation = rad;
-    }
+    if (keys["w"]) player.y -= speed;
+    if (keys["a"]) player.x -= speed;
+    if (keys["s"]) player.y += speed;
+    if (keys["d"]) player.x += speed;
 
-
-    if (keys["w"]) {
-        player.py -= speed;
-    }
-    if (keys["a"]) {
-        player.px -= speed;
-    }
-    if (keys["s"]) {
-        player.py += speed;
-    }
-    if (keys["d"]) {
-        player.px += speed;
-    }
-
-    if (keys["ArrowLeft"]) {
-        player.rotation -= speedR;
-    }
-    if (keys["ArrowRight"]) {
-        player.rotation += speedR;
-    }
-    ///// test key /////
-    if(keys["h"]){
-        console.log(`Player Rotation ${player.rotation} in degres = ${degree} and bac to rad = ${rad}`);
+    if (keys["ArrowLeft"]) player.rotation -= speedR;
+    if (keys["ArrowRight"]) player.rotation += speedR;
+    if (keys["x"]) player.rotation -= speedR;
+    if (keys["c"]) player.rotation += speedR;
+    if (keys["h"]) {
+        console.log(`Player Rotation ${player.rotation}`);
     }
 }
 
-let shootEnabled = true; // Add a flag to check if shooting is enabled
 
-function Shoot() {
-    if (shootEnabled) {
-        canvas.addEventListener("mousedown", createBullet);
-        shootEnabled = false; // Disable shooting until the bullet is created
+let canShoot = true;
+
+// Add an event listener for mouse clicks
+canvas.addEventListener("mousedown", function (event) {
+    if (event.button === 0 && canShoot) { // 0 represents the left mouse button
+        shoot();
+        canShoot = false; // Set to false to prevent further shooting until the next click
     }
+});
 
-    function createBullet(event) {
-        if (event.button === 0) {
-            ctx.fillStyle = "#ff0000";
-            console.log("Shoot");
+function shoot() {
+    const offsetX = player.width / 2;
+    const offsetY = player.height / 2;
+    const startX = player.x + offsetX;  // Change to player.x
+    const startY = player.y + offsetY;  // Change to player.y
+    bullets.push(new Bullet(startX-5, startY-5, 10, 10, player.rotation - Math.PI/2));
+    // Add any other shooting-related logic here
 
-            // Optionally, remove the event listener if you don't need it anymore
-            canvas.removeEventListener("mousedown", createBullet);
+    setTimeout(() => {
+        canShoot = true;
+    }, 5); 
+}
 
-            shootEnabled = true; // Enable shooting again after the bullet is created
+function updateBullets() {
+    for (let i = bullets.length - 1; i >= 0; i--) {
+        let bullet = bullets[i];
+        bullet.update();
+
+        // Remove bullets that are out of bounds
+        if (bullet.x < 0 || bullet.x > width || bullet.y < 0 || bullet.y > height) {
+            bullets.splice(i, 1);
+        } else {
+            bullet.draw();
         }
     }
 }
 
-
-function draw() {
+function update() {
     clear();
-    drawPlayer();
+    playerMove();
+    player.draw();
+    updateBullets();
     drawScore();
+    requestAnimationFrame(update);
 }
 
 function start() {
     score = 0;
-    requestAnimationFrame(update);
-}
-
-function update() {
-    draw();
-    getScore();
-    playerMove();
-    Shoot();
-
-
-
-
-
     requestAnimationFrame(update);
 }
 
